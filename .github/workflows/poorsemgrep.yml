@@ -1,0 +1,41 @@
+on:
+  workflow_dispatch: {}
+  pull_request: {}
+  push:
+    branches:
+      - main
+      - master
+  schedule:
+    - cron: 49 11 * * *
+
+name: PoorSemgrep OSS Scan
+
+jobs:
+  semgrep:
+    name: semgrep/scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # REQUIRED: To create the "Vulnerability Alerts" in the Security tab
+      security-events: write 
+
+    container:
+      image: semgrep/semgrep
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep Scan
+        # --config auto: Automatically detects languages and pulls relevant public rules
+        # --sarif: Formats output for GitHub
+        # --output: Saves results to a file for the next step
+        run: semgrep scan --config auto --sarif --output=semgrep.sarif
+
+      - name: Upload results to GitHub Security tab
+        # Updated to v4 to avoid the 2026 deprecation
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: semgrep.sarif
+        # Ensure results are uploaded even if vulnerabilities are found
+        if: always()
