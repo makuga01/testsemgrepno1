@@ -21,19 +21,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Cppcheck (Fixing SARIF Output)
-        # 1. Use --output-file to keep the SARIF clean from stdout chatter
-        # 2. Use --quiet to suppress progress messages
+      - name: Run Cppcheck and Sanitize SARIF
+        # 1. Run cppcheck and output to a temp file
+        # 2. Use sed to replace "0" columns with "1" to satisfy GitHub's validator
         run: |
           cppcheck --enable=all \
                    --inline-suppr \
                    --check-level=exhaustive \
                    --output-format=sarif \
                    --quiet \
-                   --output-file=cppcheck-results.sarif .
+                   --output-file=cppcheck-raw.sarif .
+          
+          sed -i 's/"startColumn": 0/"startColumn": 1/g' cppcheck-raw.sarif
+          sed -i 's/"endColumn": 0/"endColumn": 1/g' cppcheck-raw.sarif
+          
+          mv cppcheck-raw.sarif cppcheck-results.sarif
 
       - name: Upload SARIF results to GitHub
-        # Updated to v4 per the deprecation warning
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: cppcheck-results.sarif
