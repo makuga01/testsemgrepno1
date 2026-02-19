@@ -12,23 +12,29 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      security-events: write # Required to upload results to the Security tab
+      security-events: write 
 
     container:
-      # We use a container that has Cppcheck 2.16+ to ensure native SARIF support
       image: ghcr.io/facthunder/cppcheck:latest 
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Cppcheck (Native SARIF)
-        # We redirect the output to a file that GitHub can read
+      - name: Run Cppcheck (Fixing SARIF Output)
+        # 1. Use --output-file to keep the SARIF clean from stdout chatter
+        # 2. Use --quiet to suppress progress messages
         run: |
-          cppcheck --enable=all --inline-suppr --check-level=exhaustive --output-format=sarif . > cppcheck-results.sarif
+          cppcheck --enable=all \
+                   --inline-suppr \
+                   --check-level=exhaustive \
+                   --output-format=sarif \
+                   --quiet \
+                   --output-file=cppcheck-results.sarif .
 
       - name: Upload SARIF results to GitHub
-        uses: github/codeql-action/upload-sarif@v3
+        # Updated to v4 per the deprecation warning
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: cppcheck-results.sarif
         if: always()
