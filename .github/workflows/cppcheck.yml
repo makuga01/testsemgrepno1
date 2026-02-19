@@ -1,0 +1,34 @@
+name: Cppcheck Static Analysis
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  cppcheck:
+    name: Run Cppcheck
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # Required to upload results to the Security tab
+
+    container:
+      # We use a container that has Cppcheck 2.16+ to ensure native SARIF support
+      image: ghcr.io/facthunder/cppcheck:latest 
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Cppcheck (Native SARIF)
+        # We redirect the output to a file that GitHub can read
+        run: |
+          cppcheck --enable=all --inline-suppr --check-level=exhaustive --output-format=sarif . > cppcheck-results.sarif
+
+      - name: Upload SARIF results to GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: cppcheck-results.sarif
+        if: always()
